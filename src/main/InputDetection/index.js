@@ -7,9 +7,17 @@ const isPackaged = app.isPackaged
 const processes = {} // This will track each spawned process by type
 
 let interactionTimestamps = []
+let interactionActivityTimestamps = []
 let detectionStatus = false
 export function getInteractionTimestamps() {
-  return interactionTimestamps.slice()
+  return {
+    interactionTimestamps: interactionTimestamps.slice(),
+    interactionActivityTimestamps: interactionActivityTimestamps.slice(),
+  };
+}
+
+export function resetInteractionTimeStampsForActivity () {
+  return interactionActivityTimestamps = []
 }
 
 // Helper function to check if the executable exists
@@ -33,7 +41,8 @@ function handleData(data, type) {
     }
 
     interactionTimestamps.push(newEntry)
-    console.log(interactionTimestamps, 'interaction timestamps')
+    interactionActivityTimestamps.push(newEntry)
+    // console.log(interactionTimestamps, 'interaction timestamps')
 
     // You can re-enable and adjust this logic if needed
     // if (interactionTimestamps.length > idleCalctimeinSeconds) {

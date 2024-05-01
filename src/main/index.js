@@ -1,15 +1,19 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { startDetection, stopDetection } from './InputDetection';
+import { startDetection, stopDetection, getInteractionTimestamps, resetInteractionTimeStampsForActivity } from './InputDetection'
+import takeScreenshot from './CronJobs'
+import cron from 'node-cron'
+import { calculateActivityPercentage, calculateIdleTime } from './ActivityAnalyser'
+import Dialog from 'electron-dialog';
 
-const isPackaged = app.isPackaged;
+const isPackaged = app.isPackaged
 let mainWindow
 
 function createWindow() {
   // Create the browser window.
-   mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
@@ -24,7 +28,7 @@ function createWindow() {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
-    mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -47,7 +51,6 @@ function createWindow() {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
- 
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -79,13 +82,43 @@ app.on('window-all-closed', () => {
   }
 })
 
+//Logicss
 
-ipcMain.on("startdetection", ()=>{
+const handleScreenshot = async () => {
+  try {
+    const dataURL = await takeScreenshot()
+    // console.log('Screenshot taken:', dataURL);
+  } catch (error) {
+    console.error('Failed to take screenshot:', error)
+  }
+}
+
+let Cronjob
+
+
+ipcMain.on('startdetection', () => {
   startDetection('mouse')
   startDetection('keyboard')
+  Cronjob =  cron.schedule('* * * * *', () => {
+    console.log('running a task every minute')
+    const activityArr = getInteractionTimestamps()
+    const currenttimestamp = Date.now()
+    const idleTime = calculateIdleTime(activityArr?.interactionTimestamps, currenttimestamp)
+    idleTime > 0 ? dialog.showMessageBox({
+      title: 'Hello',
+      message: 'idle alert',
+      buttons: ['OK']
+    }) :
+    console.log(idleTime, "idletime")
+    const activityPersent = calculateActivityPercentage(activityArr?.interactionActivityTimestamps, 60)
+    console.log(activityPersent, "activity persentage")
+    handleScreenshot()
+    resetInteractionTimeStampsForActivity()
+  })
 })
 
-ipcMain.on("stopdetection", ()=>{
+ipcMain.on('stopdetection', () => {
+  Cronjob.stop()
   stopDetection('mouse')
   stopDetection('keyboard')
 })

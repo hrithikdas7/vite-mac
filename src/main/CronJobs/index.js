@@ -1,5 +1,8 @@
 import { desktopCapturer, screen, Notification } from 'electron';
 
+
+
+// screenshot logic for win and mac
 async function captureScreen() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const options = {
